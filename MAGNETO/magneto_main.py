@@ -10,7 +10,7 @@ from keras.saving.save import load_model
 from MAGNETO.lib import VecToImage
 
 
-def magneto_main(config,dataset_param):
+def magneto_main(config,dataset_param,toBinary,toBinaryMap):
     with open(dataset_param["path"] + dataset_param["trainFile"], 'r') as file:
         data = {"Xtrain": pd.DataFrame(list(csv.DictReader(file))), "class": dataset_param["classes"]}
         data["Classification"] = data["Xtrain"][dataset_param["classification"]]
@@ -56,6 +56,16 @@ def magneto_main(config,dataset_param):
             del data["Xtest"][i]
     data["Xtrain"] = data["Xtrain"].astype(float)
     data["Xtest"] = data["Xtest"].astype(float)
+
+
+
+    if toBinary:
+        print("[+]Mapping To Binary")
+        data["Classification"] = data["Classification"].map(toBinaryMap)
+        data["Ytest"] = data["Ytest"].map(toBinaryMap)
+    else:
+        data["Classification"] = data["Classification"].astype(float)
+        data["Ytest"] = data["Ytest"].astype(float)
 
     f_myfile = open(config["MAGNETO"]["OutputDirMagneto"] + 'Ytrain.pickle', 'wb')
     pickle.dump(data["Classification"], f_myfile)

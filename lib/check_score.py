@@ -110,7 +110,7 @@ def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_t
     scores["epoch"] = len(history.history["val_loss"])
 
     res_training = np.argmax(model.predict(np.array(np.concatenate((x_train, x_val), axis=0))), axis=-1)
-    cm = metrics.confusion_matrix(y_test, res)
+    cm = metrics.confusion_matrix(np.array(np.concatenate((y_train, y_val)), axis=0), res_training)
     tp = cm[0][0]  # attacks true
     fn = cm[0][1]  # attacs predict normal
     fp = cm[1][0]  # normal predict attacks

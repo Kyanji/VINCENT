@@ -28,8 +28,6 @@ config.gpu_options.allow_growth = True  # dynamically grow the memory used on th
 session = InteractiveSession(config=config)
 
 
-
-
 def main():
     config = configparser.ConfigParser()
     config.read('config.ini')
@@ -42,14 +40,14 @@ def main():
     tf.config.threading.set_intra_op_parallelism_threads(1)
     os.environ['PYTHONHASHSEED'] = config["SETTINGS"]["Seed"]
     np.random.seed(int(config["SETTINGS"]["Seed"]))
-    #rn.seed(1254)
+    # rn.seed(1254)
     tf.keras.utils.set_random_seed(int(config["SETTINGS"]["Seed"]))
-
 
     dataset_param = config[config["SETTINGS"]["Dataset"]]
 
     if config.getboolean("SETTINGS", "UseMagnetoEncoding"):
-        magneto_main(config, dataset_param)
+        magneto_main(config, dataset_param, dataset_param.getboolean("toBinary"),
+                     json.loads(dataset_param["toBinaryMap"]))
 
     x_train, y_train, x_test, y_test = load_dataset(dataset_param)
     print("----SUMMARY----")
@@ -107,10 +105,12 @@ def main():
     end = datetime.now()
 
     if config.getboolean("SETTINGS", "Resize"):
-        scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test_resized, y_test, config, len(set(y_train)),end-start,
-                                      wandb)
+        scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test_resized, y_test,
+                                          config, len(set(y_train)), end - start,
+                                          wandb)
     else:
-        scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, len(set(y_train)),end-start,
+        scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config,
+                                          len(set(y_train)), end - start,
                                           wandb)
 
     print("-----")
