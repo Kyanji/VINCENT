@@ -162,6 +162,11 @@ def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_t
         "BatchSize": config["MODEL"]["BatchSize"],
         "Epochs": config["MODEL"]["Epochs"],
 
+        "HiddenDim": config["VIT_SETTINGS"]["HiddenDim"],
+        "PatchSize": config["VIT_SETTINGS"]["PatchSize"],
+        "NumLayer": config["VIT_SETTINGS"]["NumLayer"],
+        "NumHeads": config["VIT_SETTINGS"]["NumHeads"],
+        "MlpDim": config["VIT_SETTINGS"]["MlpDim"],
     }
     df_scores_t=pd.DataFrame(data=scores_t, index=[1])
     df_conf = pd.DataFrame(data=config, index=[1])

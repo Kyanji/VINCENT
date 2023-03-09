@@ -25,6 +25,14 @@ def set_dashboard(config):
             "Patience": config["MODEL"]["Patience"],
             "BatchSize": config["MODEL"]["BatchSize"],
             "Epochs": config["MODEL"]["Epochs"],
+            #vit
+            "HiddenDim": config["VIT_SETTINGS"]["HiddenDim"],
+            "PatchSize": config["VIT_SETTINGS"]["PatchSize"],
+            "NumLayer": config["VIT_SETTINGS"]["NumLayer"],
+            "NumHeads": config["VIT_SETTINGS"]["NumHeads"],
+            "MlpDim": config["VIT_SETTINGS"]["MlpDim"],
+
+
 
         },
     )
