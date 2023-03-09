@@ -6,10 +6,10 @@ def model_compile(model,config):
     )
     model.compile(
         optimizer=optimizer,
-        loss=keras.losses.SparseCategoricalCrossentropy(),
+        loss=keras.losses.CategoricalCrossentropy(),
         metrics=[
-            keras.losses.SparseCategoricalCrossentropy(name="loss"),
-            keras.metrics.SparseCategoricalAccuracy(name="accuracy"),
+            keras.losses.CategoricalCrossentropy(name="loss"),
+            keras.metrics.CategoricalAccuracy(name="accuracy"),
         ],
     )
 

@@ -12,7 +12,6 @@ from sklearn.metrics import confusion_matrix, balanced_accuracy_score, f1_score
 
 from MAGNETO.lib.Cart2Pixel import Cart2Pixel
 from MAGNETO.lib.ConvPixel import ConvPixel
-from MAGNETO.lib.deep import CNN_Nature, CNN2
 import matplotlib.pyplot as plt
 
 import time
