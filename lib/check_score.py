@@ -49,8 +49,14 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
         "BatchSize": config["MODEL"]["BatchSize"],
         "Epochs": config["MODEL"]["Epochs"],
 
-    },
-
+        "HiddenDim": config["VIT_SETTINGS"]["HiddenDim"],
+        "PatchSize": config["VIT_SETTINGS"]["PatchSize"],
+        "NumLayer": config["VIT_SETTINGS"]["NumLayer"],
+        "NumHeads": config["VIT_SETTINGS"]["NumHeads"],
+        "MlpDim": config["VIT_SETTINGS"]["MlpDim"],
+        "Dropout": config["VIT_SETTINGS"]["Dropout"],
+        "Seed": config["SETTINGS"]["Seed"],
+    }
     df = pd.DataFrame(data=scores, index=[1])
     df_conf = pd.DataFrame(data=config, index=[1])
     # df.to_excel(, index=False)
@@ -107,10 +113,12 @@ def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_t
 
     scores_loss = [history.history['val_loss'][epoch] for epoch in range(len(history.history['loss']))]
     scores["val_loss"] = min(scores_loss)
+    scores["val_loss_last"] = history.history['val_loss'][-1]
+    scores["val_loss_best_epoch"] = np.argmin(history.history['val_loss'])
     scores["epoch"] = len(history.history["val_loss"])
 
     res_training = np.argmax(model.predict(np.array(np.concatenate((x_train, x_val), axis=0))), axis=-1)
-    cm = metrics.confusion_matrix(np.array(np.concatenate((y_train, y_val)), axis=0), res_training)
+    cm = metrics.confusion_matrix(np.array(np.concatenate((y_train, y_val))), res_training)
     tp = cm[0][0]  # attacks true
     fn = cm[0][1]  # attacs predict normal
     fp = cm[1][0]  # normal predict attacks
@@ -162,11 +170,14 @@ def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_t
         "BatchSize": config["MODEL"]["BatchSize"],
         "Epochs": config["MODEL"]["Epochs"],
 
+
         "HiddenDim": config["VIT_SETTINGS"]["HiddenDim"],
         "PatchSize": config["VIT_SETTINGS"]["PatchSize"],
         "NumLayer": config["VIT_SETTINGS"]["NumLayer"],
         "NumHeads": config["VIT_SETTINGS"]["NumHeads"],
         "MlpDim": config["VIT_SETTINGS"]["MlpDim"],
+        "Dropout" : config["VIT_SETTINGS"]["Dropout"],
+        "Seed":  config["SETTINGS"]["Seed"],
     }
     df_scores_t=pd.DataFrame(data=scores_t, index=[1])
     df_conf = pd.DataFrame(data=config, index=[1])

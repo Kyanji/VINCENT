@@ -1,7 +1,7 @@
 import tensorflow as tf
 import vit_keras
 from vit_keras import vit
-def VisualTransformers(image_size, num_channels, PatchSize, NumLayer, HiddenDim, NumHeads, MlpDim, NumClasses):
+def VisualTransformers(image_size, num_channels, PatchSize, NumLayer, HiddenDim, NumHeads, MlpDim, NumClasses,Dropout):
     """ Input """
     inputs = tf.keras.layers.Input((image_size, image_size, num_channels)) ## (None, 512, 512, 3)
 
@@ -26,7 +26,7 @@ def VisualTransformers(image_size, num_channels, PatchSize, NumLayer, HiddenDim,
         x, _ = vit_keras.vit.layers.TransformerBlock(
             num_heads=NumHeads,
             mlp_dim=MlpDim,
-            dropout=0.1,
+            dropout=Dropout,
             name=f"Transformer/encoderblock_{n}",
         )(x)
 

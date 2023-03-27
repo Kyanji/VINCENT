@@ -28,6 +28,14 @@ config.gpu_options.allow_growth = True  # dynamically grow the memory used on th
 session = InteractiveSession(config=config)
 
 
+def giusy_map(a):
+    b = int(a)
+    if a == 4:
+        return 0
+    else:
+        return 1
+
+
 def main():
     config = configparser.ConfigParser()
     config.read('config.ini')
@@ -49,11 +57,20 @@ def main():
         magneto_main(config, dataset_param, dataset_param.getboolean("toBinary"),
                      json.loads(dataset_param["toBinaryMap"]))
 
+    print(dataset_param["pathImages"] + dataset_param["trainName"])
     x_train, y_train, x_test, y_test = load_dataset(dataset_param)
+    if dataset_param.getboolean("toBinary"):
+        print("[+]Mapping To Binary")
+        y_train = y_train.apply(giusy_map)
+        y_test = y_test.apply(giusy_map)
     print("----SUMMARY----")
     print("XTRAIN SHAPE:\t", x_train.shape, "\tRANGE:\t", x_train.min(), x_train.max())
-    print("XTEST SHAPE:\t", x_train.shape, "\tRANGE:\t", x_train.min(), x_train.max())
+    print("XTEST SHAPE:\t", x_test.shape, "\tRANGE:\t", x_test.min(), x_test.max())
     print("CLASSES:\t", len(set(y_train)))
+    if False:
+        print("[+]0 1 norm giusy")
+        x_train = np.array(x_train) / 2
+        x_test = np.array(x_test) / 2
     if config.getboolean("SETTINGS", "UseRGBEncoding"):
         print("[+]RGB encoding")
         shape = x_train.shape[1:3]
@@ -104,14 +121,17 @@ def main():
     model, history = fit(model, config, x_train, y_train, x_val, y_val, dashboard)
     end = datetime.now()
 
-    if config.getboolean("SETTINGS", "Resize"):
-        scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test_resized, y_test,
-                                          config, len(set(y_train)), end - start,
-                                          wandb)
+    if len(set(y_train)) != 2:
+        scores = check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, wandb)
     else:
-        scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config,
-                                          len(set(y_train)), end - start,
-                                          wandb)
+        if config.getboolean("SETTINGS", "Resize"):
+            scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test_resized, y_test,
+                                              config, len(set(y_train)), end - start,
+                                              wandb)
+        else:
+            scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config,
+                                              len(set(y_train)), end - start,
+                                              wandb)
 
     print("-----")
 

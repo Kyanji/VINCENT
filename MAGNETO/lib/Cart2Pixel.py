@@ -67,14 +67,15 @@ def count_model_col(rotatedData, Q, r1, r2, params=None):
         tot.append([A, B, sum])
         a = ConvPixel(Q["data"][:, 0], zp[0], zp[1], A, B)
 
-       # if params != None:
-        #    plt.savefig(params["dir"] + str(A) + "x" + str(B) + '.png')
-        #else:
-       #     plt.savefig(str(A) + '.png')
-        #plt.show()
+    # if params != None:
+    #    plt.savefig(params["dir"] + str(A) + "x" + str(B) + '.png')
+    # else:
+    #     plt.savefig(str(A) + '.png')
+    # plt.show()
     if params != None:
-        pd.DataFrame(tot, columns=["indexA", "indexB", "collisions"]).to_excel(params["OutputDir"] + "Collisionmezzi.xlsx",
-                                                                               index=False)
+        pd.DataFrame(tot, columns=["indexA", "indexB", "collisions"]).to_excel(
+            params["OutputDir"] + "Collisionmezzi.xlsx",
+            index=False)
     else:
         pd.DataFrame(tot, columns=["index", "collisions"]).to_excel("Collision.xlsx", index=False)
 
@@ -101,9 +102,9 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
     x = Y[:, 0]
     y = Y[:, 1]
     n, n_sample = Q["data"].shape
-   # plt.scatter(x, y)
+    # plt.scatter(x, y)
     bbox = minimum_bounding_rectangle(Y)
-   # plt.fill(bbox[:, 0], bbox[:, 1], alpha=0.2)
+    # plt.fill(bbox[:, 0], bbox[:, 1], alpha=0.2)
     # rotation
     grad = (bbox[1, 1] - bbox[0, 1]) / (bbox[1, 0] - bbox[0, 0])
     theta = np.arctan(grad)
@@ -111,7 +112,7 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
     bboxMatrix = np.matrix(bbox)
     zrect = (R.dot(bboxMatrix.transpose())).transpose()
     # zrect=R.dot(bboxMatrix)
-  #  plt.fill(zrect[:, 0], zrect[:, 1], alpha=0.2)
+    #  plt.fill(zrect[:, 0], zrect[:, 1], alpha=0.2)
 
     coord = np.array([x, y])
     rotatedData = np.array(R.dot(coord))  # Z
@@ -123,9 +124,9 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
     # Q["data"] = np.delete(Q["data"], [175], axis=0)
     # Q["data"] = np.delete(Q["data"], [184], axis=0)
     # n = n - 1
-  #  plt.scatter(rotatedData[0, :], rotatedData[1:])
-  #  plt.axis('square')
-  #  plt.show(block=False)
+    #  plt.scatter(rotatedData[0, :], rotatedData[1:])
+    #  plt.axis('square')
+    #  plt.show(block=False)
 
     # find duplicate
     for i in range(len(rotatedData[0, :])):
@@ -207,21 +208,21 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
 
     if only_model:
         a = ConvPixel(Q["data"][:, 0], zp[0], zp[1], A, B)
-      #  plt.imshow(a, cmap="gray")
-      #  plt.show()
+    #  plt.imshow(a, cmap="gray")
+    #  plt.show()
     else:  # custom_cut=range(0, cut),
         a = ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i)
-      #  plt.imshow(a, cmap="gray")
-      #  plt.show()
+        #  plt.imshow(a, cmap="gray")
+        #  plt.show()
         if cut != "":
             images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, custom_cut=cut - 1, index=i) for i in
                       range(0, n_sample)]
         else:
             # a=np.where(Q["y"]==0)
             # attacks=Q["data"][:,a]
-            for i in range(0, 3):
-                images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i) for i in
-                          range(0, n_sample)]
+            # for i in range(0, 3):
+            images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i) for i in
+                      range(0, n_sample)]
 
         filename = params["OutputDirMagneto"] + "train" + name + ".pickle"
         f_myfile = open(filename, 'wb')
