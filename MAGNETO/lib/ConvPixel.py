@@ -2,9 +2,13 @@ import numpy as np
 from sklearn.metrics import mutual_info_score
 
 
-def ConvPixel(FVec, xp, yp, A, B, base=1, custom_cut=None, index=0):
+def ConvPixel(FVec, xp, yp, A, B, base=1, custom_cut=None, index=0,black=None):
     n = len(FVec)
-    M = np.ones([int(A), int(B)]) * base
+    if not black:
+        M = np.ones([int(A), int(B)]) * base
+    else:
+        M = np.zeros([int(A), int(B)]) * base
+
     for j in range(0, n):
         # M[int(xp[j]) - 1, int(yp[j]) - 1] = 0
         M[int(xp[j]) - 1, int(yp[j]) - 1] = FVec[j]

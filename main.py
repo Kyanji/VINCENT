@@ -22,6 +22,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from tensorflow.compat.v1 import InteractiveSession
 from MAGNETO.magneto_main import magneto_main
+from vit_keras import vit, utils
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -59,10 +60,12 @@ def main():
 
     print(dataset_param["pathImages"] + dataset_param["trainName"])
     x_train, y_train, x_test, y_test = load_dataset(dataset_param)
-    if dataset_param.getboolean("toBinary"):
-        print("[+]Mapping To Binary")
-        y_train = y_train.apply(giusy_map)
-        y_test = y_test.apply(giusy_map)
+    #y_train=y_train-1
+    #y_test=y_test-1
+    #if dataset_param.getboolean("toBinary"):
+     #   print("[+]Mapping To Binary")
+      #  y_train = y_train.apply(giusy_map)
+      #  y_test = y_test.apply(giusy_map)
     print("----SUMMARY----")
     print("XTRAIN SHAPE:\t", x_train.shape, "\tRANGE:\t", x_train.min(), x_train.max())
     print("XTEST SHAPE:\t", x_test.shape, "\tRANGE:\t", x_test.min(), x_test.max())
@@ -83,10 +86,12 @@ def main():
         x_test = np.array(x_test) / 255
     if config.getboolean("SETTINGS", "UseScale-1_1"):
         print("[+]-1 1 norm")
-        x_train = np.array(x_train) / 255
-        x_test = np.array(x_test) / 255
-        x_train = x_train * 2 - 1
-        x_test = x_test * 2 - 1
+        #x_train = np.array(x_train) / 255
+        #x_test = np.array(x_test) / 255
+        #x_train = x_train * 2 - 1
+        #x_test = x_test * 2 - 1
+        x_train = vit.preprocess_inputs(x_train).reshape(-1, 8, 8, 3)
+        x_test = vit.preprocess_inputs(x_test).reshape(-1, 8, 8, 3)
     if config.getboolean("SETTINGS", "Resize"):
         print("[+]Resizing to ", json.loads(config["SETTINGS"]["ResizeShape"]))
 

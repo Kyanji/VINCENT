@@ -48,7 +48,7 @@ def dataset_with_best_duplicates(X, y, zp):
     return X.transpose(), zp, toDelete
 
 
-def count_model_col(rotatedData, Q, r1, r2, params=None):
+def count_model_col(rotatedData, Q, r1, r2, params=None,black=None):
     tot = []
     for f in range(r1 - 1, r2):
         A = int(f * 2 / 3)
@@ -65,7 +65,7 @@ def count_model_col(rotatedData, Q, r1, r2, params=None):
         sum = str(find_duplicate(zp))
         print("Collisioni: " + sum)
         tot.append([A, B, sum])
-        a = ConvPixel(Q["data"][:, 0], zp[0], zp[1], A, B)
+        a = ConvPixel(Q["data"][:, 0], zp[0], zp[1], A, B,black=black)
 
     # if params != None:
     #    plt.savefig(params["dir"] + str(A) + "x" + str(B) + '.png')
@@ -74,13 +74,13 @@ def count_model_col(rotatedData, Q, r1, r2, params=None):
     # plt.show()
     if params != None:
         pd.DataFrame(tot, columns=["indexA", "indexB", "collisions"]).to_excel(
-            params["OutputDir"] + "Collisionmezzi.xlsx",
+            params["MAGNETO"]["OutputDir"] + "Collisionmezzi.xlsx",
             index=False)
     else:
         pd.DataFrame(tot, columns=["index", "collisions"]).to_excel("Collision.xlsx", index=False)
 
 
-def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, only_model=False, params=None):
+def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, only_model=False, params=None,black=None):
     # TODO controls on input
     if A is not None:
         A = A - 1
@@ -173,7 +173,7 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
     yp = np.round(
         1 + (-B) * (rotatedData[1, :] - max(rotatedData[1, :])) / (max(rotatedData[1, :]) - min(rotatedData[1, :])))
     # Modified Feature Position | custom cut
-    cut = params["cut"]
+    cut = params["MAGNETO"]["cut"]
     if cut != "":
         xp[59] = cut
     zp = np.array([xp, yp])
@@ -188,7 +188,7 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
     images = []
     toDelete = 0
     name = "_" + str(int(A)) + 'x' + str(int(B))
-    if params.getboolean("No_0_MI"):
+    if params["MAGNETO"].getboolean("No_0_MI"):
         name = name + "_No_0_MI"
     if mutual_info:
         Q["data"], zp, toDelete = dataset_with_best_duplicates(Q["data"], Q["y"], zp)
@@ -202,29 +202,29 @@ def Cart2Pixel(Q=None, A=None, B=None, dynamic_size=False, mutual_info=False, on
     image_model = {"xp": zp[0].tolist(), "yp": zp[1].tolist(), "A": A, "B": B, "custom_cut": cut,
                    "toDelete": toDelete}
     j = json.dumps(image_model)
-    f = open(params["OutputDirMagneto"] + "model" + name + ".json", "w")
+    f = open(params[params["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + "model" + name + ".json", "w")
     f.write(j)
     f.close()
 
     if only_model:
-        a = ConvPixel(Q["data"][:, 0], zp[0], zp[1], A, B)
+        a = ConvPixel(Q["data"][:, 0], zp[0], zp[1], A, B,black=black)
     #  plt.imshow(a, cmap="gray")
     #  plt.show()
     else:  # custom_cut=range(0, cut),
-        a = ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i)
+        a = ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i,black=black)
         #  plt.imshow(a, cmap="gray")
         #  plt.show()
         if cut != "":
-            images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, custom_cut=cut - 1, index=i) for i in
+            images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, custom_cut=cut - 1, index=i,black=black) for i in
                       range(0, n_sample)]
         else:
             # a=np.where(Q["y"]==0)
             # attacks=Q["data"][:,a]
             # for i in range(0, 3):
-            images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i) for i in
+            images = [ConvPixel(Q["data"][:, i], zp[0], zp[1], A, B, index=i,black=black) for i in
                       range(0, n_sample)]
 
-        filename = params["OutputDirMagneto"] + "train" + name + ".pickle"
+        filename = params[params["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + "train" + name + ".pickle"
         f_myfile = open(filename, 'wb')
         pickle.dump(images, f_myfile)
         f_myfile.close()

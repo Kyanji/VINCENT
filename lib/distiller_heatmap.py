@@ -1,7 +1,6 @@
 import numpy as np
 from tensorflow import keras
 import tensorflow as tf
-from lib.custom_attention import attention_map_no_norm, attention_map_no_norm_torch
 
 
 class Distiller_heatmap(keras.Model):
@@ -41,22 +40,24 @@ class Distiller_heatmap(keras.Model):
     def train_step(self, data):
         # Unpack data
         # USE HEATMAP
-        x, y = data
-        img=x.numpy()
-        images=[]
-        for i in img:
-            image, mask = attention_map_no_norm(self.teacher, i)
-            images.append(image)
-        images=np.array(images)
+        if len(data)==3:
+            x_pre, y, sample_weight  = data
+        else:
+            x_pre, y = data
+
+        x_pre = np.swapaxes(x_pre, 0, 1)
+        img = x_pre[0]
+        heatmap = x_pre[1]
+
         # Forward pass of teacher
-        teacher_predictions = self.teacher(x, training=False)
+        teacher_predictions = self.teacher(img, training=False)
 
         with tf.GradientTape() as tape:
             # Forward pass of student
-            student_predictions = self.student(images, training=True)
+            student_predictions = self.student(heatmap, training=True)
 
             # Compute losses
-            student_loss = self.student_loss_fn(y, student_predictions)
+            student_loss = self.student_loss_fn(y, student_predictions,sample_weight=sample_weight)
 
             # Compute scaled distillation loss from https://arxiv.org/abs/1503.02531
             # The magnitudes of the gradients produced by the soft targets scale
@@ -64,7 +65,7 @@ class Distiller_heatmap(keras.Model):
             distillation_loss = (
                     self.distillation_loss_fn(
                         tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
-                        tf.nn.softmax(student_predictions / self.temperature, axis=1),
+                        tf.nn.softmax(student_predictions / self.temperature, axis=1),sample_weight=sample_weight
                     )
                     * self.temperature ** 2
             )
@@ -90,10 +91,14 @@ class Distiller_heatmap(keras.Model):
 
     def test_step(self, data):
         # Unpack the data
-        x, y = data
-
+        # x, y = data
+        x_pre, y = data
+        x_pre = np.swapaxes(x_pre, 0, 1)
+        # y = y[0]
+        img = x_pre[0]
+        heatmap = x_pre[1]
         # Compute predictions
-        y_prediction = self.student(x, training=False)
+        y_prediction = self.student(heatmap, training=False)
 
         # Calculate the loss
         student_loss = self.student_loss_fn(y, y_prediction)
@@ -105,4 +110,11 @@ class Distiller_heatmap(keras.Model):
         results = {m.name: m.result() for m in self.metrics}
         results.update({"student_loss": student_loss})
         return results
-# TODO 
+
+    def call(self, data):
+        x_pre = np.swapaxes(data, 0, 1)
+        # y = y[0]
+        img = x_pre[0]
+        heatmap = x_pre[1]
+        return self.student(heatmap,training=False)
+# TODO

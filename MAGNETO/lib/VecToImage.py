@@ -18,7 +18,7 @@ import time
 
 
 def toImage(config, dataset, norm):
-    np.random.seed(config.getint("Seed"))
+    np.random.seed(config["MAGNETO"].getint("Seed"))
     print("modelling dataset")
     global YGlobal
     YGlobal = to_categorical(dataset["Classification"])
@@ -46,21 +46,21 @@ def toImage(config, dataset, norm):
     # TODO implement norm 2
     print("trasposing")
 
-    q = {"data": np.array(dataset["Xtrain"].values).transpose(), "method": config["Metod"],
-         "max_A_size": config.getint("MaxASize"), "max_B_size": config.getint("MaxBSize"), "y": np.argmax(YGlobal, axis=1)}
+    q = {"data": np.array(dataset["Xtrain"].values).transpose(), "method": config["MAGNETO"]["Metod"],
+         "max_A_size": config["MAGNETO"].getint("MaxASize"), "max_B_size": config["MAGNETO"].getint("MaxBSize"), "y": np.argmax(YGlobal, axis=1)}
     print(q["method"])
     print(q["max_A_size"])
     print(q["max_B_size"])
 
     # generate images
-    XGlobal, image_model, toDelete = Cart2Pixel(q, q["max_A_size"], q["max_B_size"], config.getboolean("Dynamic_Size"),
-                                                mutual_info=config.getboolean("mutualInfo"), params=config, only_model=False)
+    XGlobal, image_model, toDelete = Cart2Pixel(q, q["max_A_size"], q["max_B_size"], config["MAGNETO"].getboolean("Dynamic_Size"),
+                                                mutual_info=config["MAGNETO"].getboolean("mutualInfo"), params=config, only_model=False,black=config["MAGNETO"].getboolean("black"))
 
     model_print=np.ones((q["max_A_size"], q["max_B_size"]))
     for x,y  in zip(image_model["xp"],image_model["yp"]):
         model_print[int(x)-1][int(y)-1]=0
 
-    plt.imsave(config["OutputDirMagneto"] + "model.png",
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + "model.png",
                cv2.resize(model_print, dsize=(256, 256), interpolation=cv2.INTER_NEAREST), cmap="gray")
 
     old_keys = dataset["Xtest"].keys()
@@ -69,7 +69,7 @@ def toImage(config, dataset, norm):
     # generate testingset image
     print(dataset["Xtest"].columns)
 
-    if config.getboolean("mutualInfo"):
+    if config["MAGNETO"].getboolean("mutualInfo"):
         dataset["Xtest"] = dataset["Xtest"].drop(dataset["Xtest"].columns[toDelete], axis=1)
 
     # da qui
@@ -82,12 +82,12 @@ def toImage(config, dataset, norm):
     coor_model = {"coord": ["xp: " + str(i) + "," "yp :" + str(z) + ":" + col for i, z, col in zip(x, y, col)]}
     coor_used = {"coord": [col1 for col1 in col]}
     j = json.dumps(coor_model)
-    f = open(config["OutputDirMagneto"] + "MI_model.json", "w")
+    f = open(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + "MI_model.json", "w")
     f.write(j)
     f.close()
 
     j = json.dumps(list(set(old_keys)-set(coor_used["coord"])))
-    f = open(config["OutputDirMagneto"] + "MI_model_features_deleted.json", "w")
+    f = open(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + "MI_model_features_deleted.json", "w")
     f.write(j)
     f.close()
 
@@ -107,26 +107,26 @@ def toImage(config, dataset, norm):
     #                                custom_cut=range(0, image_model["custom_cut"]))
     if image_model["custom_cut"] != "":
         XTestGlobal = [ConvPixel(dataset["Xtest"][:, i], np.array(image_model["xp"]), np.array(image_model["yp"]),
-                                 image_model["A"], image_model["B"], custom_cut=range(0, image_model["custom_cut"]))
+                                 image_model["A"], image_model["B"], custom_cut=range(0, image_model["custom_cut"]),black=config["MAGNETO"].getboolean("black"))
                        for i in range(0, dataset["Xtest"].shape[1])]  # dataset["Xtest"].shape[1])]
     else:
         XTestGlobal = [ConvPixel(dataset["Xtest"][:, i], np.array(image_model["xp"]), np.array(image_model["yp"]),
-                                 image_model["A"], image_model["B"])
+                                 image_model["A"], image_model["B"],black=config["MAGNETO"].getboolean("black"))
                        for i in range(0, dataset["Xtest"].shape[1])]  # dataset["Xtest"].shape[1])]
 
     print("Test Images done!")
 
     # saving testingset
     name = "_" + str(int(q["max_A_size"])) + "x" + str(int(q["max_B_size"]))
-    if config.getboolean("No_0_MI"):
+    if config["MAGNETO"].getboolean("No_0_MI"):
         name = name + "_No_0_MI"
-    if config.getboolean("mutualInfo"):
+    if config["MAGNETO"].getboolean("mutualInfo"):
         name = name + "_MI"
     else:
         name = name + "_Mean"
     if image_model["custom_cut"] != "":
         name = name + "_Cut" + str(image_model["custom_cut"])
-    filename = config["OutputDirMagneto"] + "test" + name + ".pickle"
+    filename = config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + "test" + name + ".pickle"
     f_myfile = open(filename, 'wb')
     pickle.dump(XTestGlobal, f_myfile)
     f_myfile.close()

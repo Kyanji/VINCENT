@@ -58,19 +58,33 @@ def magneto_main(config, dataset_param, toBinary, toBinaryMap):
     data["Xtest"] = data["Xtest"].astype(float)
 
     if toBinary:
+        y1 = data["Classification"].astype(float)
+        y2 = data["Ytest"].astype(float)
+        if y1.min() != 0:
+            y1 = y1 - 1
+            y2 = y2 - 1
+
         print("[+]Mapping To Binary")
+        f_myfile = open(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + 'Ytrain_multi.pickle', 'wb')
+        pickle.dump(y1, f_myfile)
+        f_myfile.close()
+
+        f_myfile = open(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + 'Ytest_multi.pickle', 'wb')
+        pickle.dump(y2, f_myfile)
+        f_myfile.close()
+
         data["Classification"] = data["Classification"].map(toBinaryMap)
         data["Ytest"] = data["Ytest"].map(toBinaryMap)
     else:
         data["Classification"] = data["Classification"].astype(float)
         data["Ytest"] = data["Ytest"].astype(float)
 
-    f_myfile = open(config["MAGNETO"]["OutputDirMagneto"] + 'Ytrain.pickle', 'wb')
+    f_myfile = open(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + 'Ytrain.pickle', 'wb')
     pickle.dump(data["Classification"], f_myfile)
     f_myfile.close()
 
-    f_myfile = open(config["MAGNETO"]["OutputDirMagneto"] + 'Ytest.pickle', 'wb')
+    f_myfile = open(config[config["SETTINGS"]["Dataset"]]["OutputDirMagneto"] + 'Ytest.pickle', 'wb')
     pickle.dump(data["Ytest"], f_myfile)
     f_myfile.close()
 
-    return VecToImage.toImage(config["MAGNETO"], data, norm=True)
+    return VecToImage.toImage(config, data, norm=True)

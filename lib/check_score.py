@@ -6,23 +6,47 @@ from datetime import datetime
 from keras.utils import to_categorical
 
 
-def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, dashboard=None):
-    scores = {"epoch_done": len(history.history["loss"])}
+def split(a, n):
+    k, m = divmod(len(a), n)
+    return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+
+
+def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, dashboard=None,
+                         time=None, save=True, distillation=False):
+    if distillation:
+        scores = {"epoch_done": len(history.history["val_student_loss"])}
+
+    else:
+        scores = {"epoch_done": len(history.history["loss"])}
 
     res = np.argmax(model.predict(x_test), axis=-1)
-    res_path = config["SETTINGS"]["OutputDir"]
+    res_path = config[config["SETTINGS"]["Dataset"]]["OutputDir"]
     now = datetime.now()
     date = now.strftime("%Y-%m-%d-%H-%M-%S")
-    model.save(res_path + date + ".h5")
+    if save:
+        model.save(res_path + date + ".h5")
 
     scores["OA"] = metrics.accuracy_score(y_test, res) * 100
     scores["BalancedAccuracy"] = metrics.balanced_accuracy_score(y_test, res) * 100
     scores["F1W"] = metrics.f1_score(y_test, res, average="weighted") * 100
     scores["F1M"] = metrics.f1_score(y_test, res, average="macro") * 100
-    scores_loss = [history.history['val_loss'][epoch] for epoch in range(len(history.history['loss']))]
-    scores["val_loss"] = min(scores_loss)
-
-    res_training = np.argmax(model.predict(np.array(np.concatenate((x_train, x_val), axis=0))), axis=-1)
+    if distillation:
+        distillation_loss = [history.history['distillation_loss'][epoch] for epoch in
+                             range(len(history.history['distillation_loss']))]
+        scores["distillation_loss"] = min(distillation_loss)
+        val_student_loss = [history.history['val_student_loss'][epoch] for epoch in
+                            range(len(history.history['val_student_loss']))]
+        scores["val_student_loss"] = min(val_student_loss)
+    else:
+        scores_loss = [history.history['val_loss'][epoch] for epoch in range(len(history.history['loss']))]
+        scores["val_loss"] = min(scores_loss)
+    index = list(split(range(len(x_train)), 4))
+    res_training = []
+    for k in index:
+        total_x = np.argmax(model.predict(np.array(x_train[k])), axis=-1)
+        res_training.extend(total_x)
+    total_x = np.argmax(model.predict(np.array(x_val)), axis=-1)
+    res_training.extend(total_x)
 
     scores["OA_train"] = metrics.accuracy_score(np.concatenate((y_train, y_val), axis=0), res_training) * 100
     scores["BalancedAccuracy_train"] = metrics.balanced_accuracy_score(np.concatenate((y_train, y_val), axis=0),
@@ -32,6 +56,8 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
     scores["F1M_train"] = metrics.f1_score(np.concatenate((y_train, y_val), axis=0), res_training,
                                            average="macro") * 100
     scores["cm"] = str(metrics.confusion_matrix(y_test, res))
+    if time is not None:
+        scores["time(m)"] = time.total_seconds() / 60
 
     config = {
         # "learning_rate": 0.02,
@@ -60,12 +86,12 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
     df = pd.DataFrame(data=scores, index=[1])
     df_conf = pd.DataFrame(data=config, index=[1])
     # df.to_excel(, index=False)
-
-    writer = pd.ExcelWriter(res_path + date + ".xlsx", engine='xlsxwriter')
-    df.to_excel(writer, sheet_name='results')
-    df_conf.to_excel(writer, sheet_name='configuration')
-    writer.save()
-    writer.close()
+    if save:
+        writer = pd.ExcelWriter(res_path + date + ".xlsx", engine='xlsxwriter')
+        df.to_excel(writer, sheet_name='results')
+        df_conf.to_excel(writer, sheet_name='configuration')
+        writer.save()
+        writer.close()
 
     if dashboard is not None:
         dashboard.log(scores)
@@ -73,12 +99,13 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
 
 
 def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, N_CLASSES, time,
-                             dashboard=None):
+                             dashboard=None, save=True, distillation=False):
     res = np.argmax(model.predict(x_test), axis=-1)
-    res_path = config["SETTINGS"]["OutputDir"]
+    res_path = config[config["SETTINGS"]["Dataset"]]["OutputDir"]
     now = datetime.now()
     date = now.strftime("%Y-%m-%d-%H-%M-%S")
-    model.save(res_path + date + ".h5")
+    if save:
+        model.save(res_path + date + ".h5")
 
     cm = metrics.confusion_matrix(y_test, res)
     tp = cm[0][0]  # attacks true
@@ -115,6 +142,11 @@ def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_t
     scores["val_loss"] = min(scores_loss)
     scores["val_loss_last"] = history.history['val_loss'][-1]
     scores["val_loss_best_epoch"] = np.argmin(history.history['val_loss'])
+    if distillation:
+        distillation_loss = [history.history['distillation_loss'][epoch] for epoch in
+                             range(len(history.history['distillation_loss']))]
+        scores["distillation_loss"] = min(distillation_loss)
+
     scores["epoch"] = len(history.history["val_loss"])
 
     res_training = np.argmax(model.predict(np.array(np.concatenate((x_train, x_val), axis=0))), axis=-1)
@@ -170,24 +202,23 @@ def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_t
         "BatchSize": config["MODEL"]["BatchSize"],
         "Epochs": config["MODEL"]["Epochs"],
 
-
         "HiddenDim": config["VIT_SETTINGS"]["HiddenDim"],
         "PatchSize": config["VIT_SETTINGS"]["PatchSize"],
         "NumLayer": config["VIT_SETTINGS"]["NumLayer"],
         "NumHeads": config["VIT_SETTINGS"]["NumHeads"],
         "MlpDim": config["VIT_SETTINGS"]["MlpDim"],
-        "Dropout" : config["VIT_SETTINGS"]["Dropout"],
-        "Seed":  config["SETTINGS"]["Seed"],
+        "Dropout": config["VIT_SETTINGS"]["Dropout"],
+        "Seed": config["SETTINGS"]["Seed"],
     }
-    df_scores_t=pd.DataFrame(data=scores_t, index=[1])
+    df_scores_t = pd.DataFrame(data=scores_t, index=[1])
     df_conf = pd.DataFrame(data=config, index=[1])
-
-    writer = pd.ExcelWriter(res_path + date + ".xlsx", engine='xlsxwriter')
-    df.to_excel(writer, sheet_name='results')
-    df_scores_t.to_excel(writer, sheet_name='results_train')
-    df_conf.to_excel(writer, sheet_name='configuration')
-    writer.save()
-    writer.close()
+    if save:
+        writer = pd.ExcelWriter(res_path + date + ".xlsx", engine='xlsxwriter')
+        df.to_excel(writer, sheet_name='results')
+        df_scores_t.to_excel(writer, sheet_name='results_train')
+        df_conf.to_excel(writer, sheet_name='configuration')
+        writer.save()
+        writer.close()
 
     if dashboard is not None:
         dashboard.log(scores)
