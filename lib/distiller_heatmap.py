@@ -57,18 +57,32 @@ class Distiller_heatmap(keras.Model):
             student_predictions = self.student(heatmap, training=True)
 
             # Compute losses
-            student_loss = self.student_loss_fn(y, student_predictions,sample_weight=sample_weight)
+            if len(data) == 3:
+                student_loss = self.student_loss_fn(y, student_predictions,sample_weight=sample_weight)
+            else:
+                student_loss = self.student_loss_fn(y, student_predictions)
 
             # Compute scaled distillation loss from https://arxiv.org/abs/1503.02531
             # The magnitudes of the gradients produced by the soft targets scale
             # as 1/T^2, multiply them by T^2 when using both hard and soft targets.
-            distillation_loss = (
-                    self.distillation_loss_fn(
-                        tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
-                        tf.nn.softmax(student_predictions / self.temperature, axis=1),sample_weight=sample_weight
-                    )
-                    * self.temperature ** 2
-            )
+            if len(data) == 3:
+
+                distillation_loss = (
+                        self.distillation_loss_fn(
+                            tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
+                            tf.nn.softmax(student_predictions / self.temperature, axis=1),sample_weight=sample_weight
+                        )
+                        * self.temperature ** 2
+                )
+            else:
+                distillation_loss = (
+                self.distillation_loss_fn(
+                    tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
+                    tf.nn.softmax(student_predictions / self.temperature, axis=1),
+
+                )
+                * self.temperature ** 2
+                )
 
             loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
 

@@ -41,7 +41,7 @@ tf.data.experimental.enable_debug_mode()
 tf.config.run_functions_eagerly(True)
 config_tf = tf.compat.v1.ConfigProto()
 config_tf.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
-os.environ['HYPEROPT_FMIN_SEED'] = 0
+os.environ['HYPEROPT_FMIN_SEED'] = "9"
 
 session = InteractiveSession(config=config_tf)
 
