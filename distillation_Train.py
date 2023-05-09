@@ -41,7 +41,9 @@ tf.data.experimental.enable_debug_mode()
 tf.config.run_functions_eagerly(True)
 config_tf = tf.compat.v1.ConfigProto()
 config_tf.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
-os.environ['HYPEROPT_FMIN_SEED'] = "9"
+
+# os.environ['HYPEROPT_FMIN_SEED'] = "9"
+os.environ['HYPEROPT_FMIN_SEED'] = "0"
 
 session = InteractiveSession(config=config_tf)
 
@@ -148,7 +150,8 @@ def hyperopt_loop(param):
         distiller.save_weights(
             config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/best.tf")
     p = pd.DataFrame(score_list)
-    p.to_excel(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/"+str(date)  + ".xlsx")
+    p.to_excel(
+        config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/" + str(date) + ".xlsx")
     K.clear_session()
     wandb.finish()
     return {'loss': scores["val_student_loss"], 'status': STATUS_OK}
@@ -202,7 +205,7 @@ def main():
                                                       random_state=config.getint("SETTINGS", "Seed"))
 
     im = []
-    index = list(split(range(len(x_train)), 4))
+    index = list(split(range(len(x_train)), 10))
     for k in index:
         im1, m1, _ = attention_map_no_norm_fast(teacher, x_train[k])
         im.extend(im1)
@@ -213,14 +216,28 @@ def main():
     # im[:,:,:,1]=minmax(im[:,:,:,1])
     # im[:,:,:,2]=minmax(im[:,:,:,2])
 
-    im_val, m_val, _ = attention_map_no_norm_fast(teacher, x_val)
+    #im_val, m_val, _ = attention_map_no_norm_fast(teacher, x_val)
+    im_val = []
+    index = list(split(range(len(x_val)), 5))
+    for k in index:
+        imv, m_val, _ = attention_map_no_norm_fast(teacher, x_val[k])
+        im_val.extend(imv)
+    im_val = np.array(im_val)
+
     if config["DISTILLATION"].getboolean("LAB"):
         im_val = color.rgb2lab(im_val / 255)
     # im_val[:, :, :, 0] = minmax(im_val[:, :, :, 0])
     # im_val[:, :, :, 1] = minmax(im_val[:, :, :, 1])
     # im_val[:, :, :, 2] = minmax(im_val[:, :, :, 2])
 
-    im_test, m_test, _ = attention_map_no_norm_fast(teacher, x_test)
+    # im_test, m_test, _ = attention_map_no_norm_fast(teacher, x_test)
+    im_test = []
+    index = list(split(range(len(x_test)), 10))
+    for k in index:
+        imt, m_test, _ = attention_map_no_norm_fast(teacher, x_test[k])
+        im_test.extend(imt)
+    im_test = np.array(im_test)
+
     if config["DISTILLATION"].getboolean("LAB"):
         im_test = color.rgb2lab(im_test / 255)
 
@@ -245,7 +262,7 @@ def main():
     optimizable_variable = {"kernel": hp.choice("kernel", np.arange(2, 3 + 1)),
                             "filter": hp.choice("filter", [16, 32, 64, 128]),
                             "filter2": hp.choice("filter2", [16, 32, 64, 128]),
-                            "batch": hp.choice("batch", [32, 64, 128, 256, 512]),
+                            "batch": hp.choice("batch", [ 64, 128, 256, 512]),
                             'dropout1': hp.uniform("dropout1", 0, 1),
                             'dropout2': hp.uniform("dropout2", 0, 1),
                             "learning_rate": hp.uniform("learning_rate", 1e-4, 1e-1),
