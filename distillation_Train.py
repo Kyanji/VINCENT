@@ -73,9 +73,11 @@ def hyperopt_loop(param):
 
     student = load_student(config, shape, len(set(y_train)), param)
     student_compile(student, param)
-
-    dashboard, wandb = set_dashboard_distiller(config, param, run_id=date, id=i)
-
+    if config.getboolean("SETTINGS", "Wandb"):
+        dashboard, wandb = set_dashboard_distiller(config, param, run_id=date, id=i)
+    else:
+        dashboard = []
+        wandb=None
     distiller = Distiller_heatmap(student=student, teacher=teacher)
 
     distiller.compile(
@@ -216,7 +218,7 @@ def main():
     # im[:,:,:,1]=minmax(im[:,:,:,1])
     # im[:,:,:,2]=minmax(im[:,:,:,2])
 
-    #im_val, m_val, _ = attention_map_no_norm_fast(teacher, x_val)
+    # im_val, m_val, _ = attention_map_no_norm_fast(teacher, x_val)
     im_val = []
     index = list(split(range(len(x_val)), 5))
     for k in index:
@@ -260,9 +262,9 @@ def main():
     trials = Trials()
 
     optimizable_variable = {"kernel": hp.choice("kernel", np.arange(2, 3 + 1)),
-                            "filter": hp.choice("filter", [16, 32, 64, 128]),
+                            "filter": hp.choice("filter", [128, 256]),
                             "filter2": hp.choice("filter2", [16, 32, 64, 128]),
-                            "batch": hp.choice("batch", [ 64, 128, 256, 512]),
+                            "batch": hp.choice("batch", [64, 128, 256, 512]),
                             'dropout1': hp.uniform("dropout1", 0, 1),
                             'dropout2': hp.uniform("dropout2", 0, 1),
                             "learning_rate": hp.uniform("learning_rate", 1e-4, 1e-1),

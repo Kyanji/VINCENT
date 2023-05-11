@@ -22,6 +22,12 @@ from tensorflow.compat.v1 import InteractiveSession
 from lib.custom_attention import attention_map_no_norm, attention_map_no_norm_fast
 from keras_cv_attention_models import visualizing, test_images, botnet, halonet, beit, levit, coatnet, coat
 
+
+def split(a, n):
+    k, m = divmod(len(a), n)
+    return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+
+
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
 session = InteractiveSession(config=config)
@@ -63,14 +69,27 @@ df = pd.DataFrame(cm_train)
 df_conf = pd.DataFrame(cm_test)
 # df.to_excel(, index=False)
 
-writer = pd.ExcelWriter("./"+config["SETTINGS"]["Dataset"] + "_cm.xlsx", engine='xlsxwriter')
+writer = pd.ExcelWriter("./" + config["SETTINGS"]["Dataset"] + "_cm.xlsx", engine='xlsxwriter')
 df.to_excel(writer, sheet_name='results')
 df_conf.to_excel(writer, sheet_name='configuration')
 writer.save()
 writer.close()
 
 k = 0
-im1, m1,scaled = attention_map_no_norm_fast(teacher, x_train)
+# im1, m1,scaled = attention_map_no_norm_fast(teacher, x_train)
+im1 = []
+m1 = []
+scaled = []
+index = list(split(range(len(x_train)), 13))
+for kk in index:
+    im_g, m1_g, s1 = attention_map_no_norm_fast(teacher, x_train[kk])
+    im1.extend(im_g)
+    scaled.extend(s1)
+    m1.extend(m1_g)
+im1 = np.array(im1)
+m1 = np.array(m1)
+scaled = np.array(scaled)
+
 lab_im1 = []
 for i in im1:
     lab_im1.append(color.rgb2lab(i / 255))
@@ -96,7 +115,7 @@ for i in list(set(y_train)):
     axn[k][2].set_title('M Heat Lab')
     axn[k][3].set_title('scaled')
     axn[k][4].set_title('mask')
-    _ = axn[k][0].imshow(np.mean(x_train,axis=0).astype(np.uint8))
+    _ = axn[k][0].imshow(np.mean(x_train, axis=0).astype(np.uint8))
     _ = axn[k][1].imshow(np.mean(im1[b], axis=0).astype(np.uint8))
     m = np.mean(lab_im1[b], axis=0).astype(np.uint8)
     _ = axn[k][2].imshow(m)
@@ -111,7 +130,22 @@ plt.show()
 
 fig, axn = plt.subplots(ncols=5, nrows=len(set(y_train)))
 
-im1, m1,scaled = attention_map_no_norm_fast(teacher, x_test)
+#im1, m1, scaled = attention_map_no_norm_fast(teacher, x_test)
+im1 = []
+m1 = []
+scaled = []
+index = list(split(range(len(x_test)), 10))
+for kk in index:
+    im_g, m1_g, s1 = attention_map_no_norm_fast(teacher, x_test[kk])
+    im1.extend(im_g)
+    scaled.extend(s1)
+    m1.extend(m1_g)
+im1 = np.array(im1)
+m1 = np.array(m1)
+scaled = np.array(scaled)
+
+
+
 lab_im1 = []
 for i in im1:
     lab_im1.append(color.rgb2lab(i / 255))
@@ -134,7 +168,7 @@ for i in list(set(y_test)):
     axn[k][2].set_title('M Heat Lab')
     axn[k][3].set_title('scaled')
     axn[k][4].set_title('mask')
-    _ = axn[k][0].imshow(np.mean(x_test,axis=0).astype(np.uint8))
+    _ = axn[k][0].imshow(np.mean(x_test, axis=0).astype(np.uint8))
     _ = axn[k][1].imshow(np.mean(im1[b], axis=0).astype(np.uint8))
     m = np.mean(lab_im1[b], axis=0).astype(np.uint8)
     _ = axn[k][2].imshow(m)
