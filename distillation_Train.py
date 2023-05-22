@@ -20,6 +20,7 @@ from vit_keras import vit, utils, visualize
 
 from lib.check_score import check_score_and_save, check_score_and_save_bin
 from lib.distiller_heatmap import Distiller_heatmap
+from lib.defensive_distiller_heatmap import Defensive_Distiller_heatmap
 from lib.load_dataset import load_dataset
 from lib.load_model import load_model
 from lib.load_student_model import load_student
@@ -70,7 +71,7 @@ def hyperopt_loop(param):
     global i
     i = i + 1
     shape = x_with_h.shape[2:5]
-
+    start=datetime.now()
     student = load_student(config, shape, len(set(y_train)), param)
     student_compile(student, param)
     if config.getboolean("SETTINGS", "Wandb"):
@@ -78,7 +79,10 @@ def hyperopt_loop(param):
     else:
         dashboard = []
         wandb=None
-    distiller = Distiller_heatmap(student=student, teacher=teacher)
+    if config.getboolean("DISTILLATION", "Defensive"):
+        distiller = Defensive_Distiller_heatmap(student=student, teacher=teacher)
+    else:
+        distiller = Distiller_heatmap(student=student, teacher=teacher)
 
     distiller.compile(
         optimizer=tf.keras.optimizers.Adam(),
@@ -130,32 +134,38 @@ def hyperopt_loop(param):
     # distiller.evaluate(x_with_h, y_test)
     if len(set(y_train)) != 2:
         scores = check_score_and_save(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test, y_test,
-                                      config, save=False, distillation=True, dashboard=wandb)
+                                      config, save=False, distillation=True, dashboard=wandb,time=datetime.now()-start)
     else:
         scores = check_score_and_save_bin(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test,
                                           y_test, config,
                                           len(set(y_train)), 0,
-                                          save=False, distillation=True, dashboard=wandb)
+                                          save=False, distillation=True, dashboard=wandb,time=datetime.now()-start)
     scores.update(param)
     score_list.append(scores)
-    if not os.path.exists(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date)):
-        os.makedirs(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date))
+    if config.getboolean("DISTILLATION", "Defensive"):
+        path=config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/defensive_distiller_" + str(date)
+    else:
+        path=config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
     distiller.save_weights(
-        config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/" + str(i) + ".tf")
+        path + "/" + str(i) + ".tf")
     global best_loss
     if best_loss is None:
         best_loss = score_list[-1]["val_student_loss"]
         distiller.save_weights(
-            config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/best.tf")
+            path+ "/best.tf")
     elif score_list[-1]["val_student_loss"] < best_loss:
         best_loss = score_list[-1]["val_student_loss"]
         distiller.save_weights(
-            config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/best.tf")
+            path + "/best.tf")
     p = pd.DataFrame(score_list)
     p.to_excel(
-        config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date) + "/" + str(date) + ".xlsx")
+        path + "/" + str(date) + ".xlsx")
     K.clear_session()
-    wandb.finish()
+    if wandb is not None:
+        wandb.finish()
     return {'loss': scores["val_student_loss"], 'status': STATUS_OK}
 
 
@@ -282,7 +292,7 @@ def main():
                                 "T": hp.choice("T", [2, 3, 4, 5, 6, 7, 8, 9, 10]),
                                 "A": hp.uniform("A", 0, 1)}
 
-    fmin(hyperopt_loop, optimizable_variable, trials=trials, algo=tpe.suggest, max_evals=30)
+    fmin(hyperopt_loop, optimizable_variable, trials=trials, algo=tpe.suggest, max_evals=20)
 
 
 if __name__ == '__main__':

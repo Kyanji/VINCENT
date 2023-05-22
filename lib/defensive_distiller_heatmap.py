@@ -3,7 +3,7 @@ from tensorflow import keras
 import tensorflow as tf
 
 
-class Distiller_heatmap(keras.Model):
+class Defensive_Distiller_heatmap(keras.Model):
     def __init__(self, student, teacher):
         super().__init__()
         self.teacher = teacher
@@ -40,8 +40,8 @@ class Distiller_heatmap(keras.Model):
     def train_step(self, data):
         # Unpack data
         # USE HEATMAP
-        if len(data)==3:
-            x_pre, y, sample_weight  = data
+        if len(data) == 3:
+            x_pre, y, sample_weight = data
         else:
             x_pre, y = data
 
@@ -58,9 +58,9 @@ class Distiller_heatmap(keras.Model):
 
             # Compute losses
             if len(data) == 3:
-                student_loss = self.student_loss_fn(y, student_predictions,sample_weight=sample_weight)
+                student_loss = self.student_loss_fn(teacher_predictions, student_predictions, sample_weight=sample_weight)
             else:
-                student_loss = self.student_loss_fn(y, student_predictions) #TODO soft
+                student_loss = self.student_loss_fn(teacher_predictions, student_predictions)  # TODO soft
 
             # Compute scaled distillation loss from https://arxiv.org/abs/1503.02531
             # The magnitudes of the gradients produced by the soft targets scale
@@ -70,18 +70,18 @@ class Distiller_heatmap(keras.Model):
                 distillation_loss = (
                         self.distillation_loss_fn(
                             tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
-                            tf.nn.softmax(student_predictions / self.temperature, axis=1),sample_weight=sample_weight
+                            tf.nn.softmax(student_predictions / self.temperature, axis=1), sample_weight=sample_weight
                         )
                         * self.temperature ** 2
                 )
             else:
                 distillation_loss = (
-                self.distillation_loss_fn(
-                    tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
-                    tf.nn.softmax(student_predictions / self.temperature, axis=1),
+                        self.distillation_loss_fn(
+                            tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
+                            tf.nn.softmax(student_predictions / self.temperature, axis=1),
 
-                )
-                * self.temperature ** 2
+                        )
+                        * self.temperature ** 2
                 )
 
             loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
@@ -112,10 +112,12 @@ class Distiller_heatmap(keras.Model):
         img = x_pre[0]
         heatmap = x_pre[1]
         # Compute predictions
+        y_prediction_t = self.teacher(img, training=False)
+
         y_prediction = self.student(heatmap, training=False)
-#TODO soft
+        # TODO soft
         # Calculate the loss
-        student_loss = self.student_loss_fn(y, y_prediction)
+        student_loss = self.student_loss_fn(y_prediction_t, y_prediction)
 
         # Update the metrics.
         self.compiled_metrics.update_state(y, y_prediction)
@@ -130,5 +132,5 @@ class Distiller_heatmap(keras.Model):
         # y = y[0]
         img = x_pre[0]
         heatmap = x_pre[1]
-        return self.student(heatmap,training=False)
+        return self.student(heatmap, training=False)
 # TODO

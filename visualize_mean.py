@@ -68,12 +68,12 @@ cm_test = metrics.confusion_matrix(y_test, pred_test)
 df = pd.DataFrame(cm_train)
 df_conf = pd.DataFrame(cm_test)
 # df.to_excel(, index=False)
-
-writer = pd.ExcelWriter("./" + config["SETTINGS"]["Dataset"] + "_cm.xlsx", engine='xlsxwriter')
-df.to_excel(writer, sheet_name='results')
-df_conf.to_excel(writer, sheet_name='configuration')
-writer.save()
-writer.close()
+if False:
+    writer = pd.ExcelWriter("./" + config["SETTINGS"]["Dataset"] + "_cm.xlsx", engine='xlsxwriter')
+    df.to_excel(writer, sheet_name='results')
+    df_conf.to_excel(writer, sheet_name='configuration')
+    writer.save()
+    writer.close()
 
 k = 0
 # im1, m1,scaled = attention_map_no_norm_fast(teacher, x_train)
@@ -95,6 +95,15 @@ for i in im1:
     lab_im1.append(color.rgb2lab(i / 255))
 lab_im1 = np.array(lab_im1)
 
+model_shape=[]
+model_shape_plot=np.ones((x_train.shape[1],x_train.shape[1],3))*255
+with open(config[config["SETTINGS"]["Dataset"]]["pathImages"]+"model_"+str(x_train.shape[1])+"x"+str(x_train.shape[1])+"_MI.json","r") as f:
+    model_shape=json.load(f)
+   # for i,j in zip (model_shape["xp"],model_shape["yp"]):
+   #     model_shape_plot[int(i)-1][int(j)-1]=0
+
+if not os.path.exists(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images"):
+    os.makedirs(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images")
 for i in list(set(y_train)):
     b = np.where(y_train == i)
 
@@ -115,6 +124,27 @@ for i in list(set(y_train)):
     axn[k][2].set_title('M Heat Lab')
     axn[k][3].set_title('scaled')
     axn[k][4].set_title('mask')
+
+    def to_white_img(img):
+
+        img_to_plt=img
+        new_img_to_plot=model_shape_plot
+        for i, j in zip(model_shape["xp"], model_shape["yp"]):
+            new_img_to_plot[int(i)-1][int(j)-1]=img_to_plt[int(i)-1][int(j)-1]
+        return new_img_to_plot.astype(np.uint8)
+
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/original_train_white_" + str(i) + ".png",
+               cv2.resize(to_white_img(np.mean(x_train, axis=0).astype(np.uint8)), (1000, 1000), interpolation=cv2.INTER_NEAREST) )
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/heatmap_train_white_" + str(i) + ".png",
+               cv2.resize(to_white_img(np.mean(im1[b], axis=0).astype(np.uint8)), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/original_train_" + str(i) + ".png",
+               cv2.resize(np.mean(x_train, axis=0).astype(np.uint8), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/heatmap_train_" + str(i) + ".png",
+               cv2.resize(np.mean(im1[b], axis=0).astype(np.uint8), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/mask_train_" + str(i) + ".png",
+               cv2.resize(np.mean(m1[b], axis=0), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+
     _ = axn[k][0].imshow(np.mean(x_train, axis=0).astype(np.uint8))
     _ = axn[k][1].imshow(np.mean(im1[b], axis=0).astype(np.uint8))
     m = np.mean(lab_im1[b], axis=0).astype(np.uint8)
@@ -130,7 +160,7 @@ plt.show()
 
 fig, axn = plt.subplots(ncols=5, nrows=len(set(y_train)))
 
-#im1, m1, scaled = attention_map_no_norm_fast(teacher, x_test)
+# im1, m1, scaled = attention_map_no_norm_fast(teacher, x_test)
 im1 = []
 m1 = []
 scaled = []
@@ -144,13 +174,14 @@ im1 = np.array(im1)
 m1 = np.array(m1)
 scaled = np.array(scaled)
 
-
-
 lab_im1 = []
 for i in im1:
     lab_im1.append(color.rgb2lab(i / 255))
 lab_im1 = np.array(lab_im1)
 k = 0
+
+if not os.path.exists(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images"):
+    os.makedirs(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images")
 for i in list(set(y_test)):
     b = np.where(y_test == i)
 
@@ -168,6 +199,22 @@ for i in list(set(y_test)):
     axn[k][2].set_title('M Heat Lab')
     axn[k][3].set_title('scaled')
     axn[k][4].set_title('mask')
+
+
+
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/original_test_white_" + str(i) + ".png",
+               cv2.resize(to_white_img(np.mean(x_test, axis=0).astype(np.uint8)), (1000, 1000), interpolation=cv2.INTER_NEAREST) )
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/heatmap_test_white_" + str(i) + ".png",
+               cv2.resize(to_white_img(np.mean(im1[b], axis=0).astype(np.uint8)), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+
+
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/original_test_" + str(i) + ".png",
+               cv2.resize(np.mean(x_test, axis=0).astype(np.uint8), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/heatmap_test_" + str(i) + ".png",
+               cv2.resize(np.mean(im1[b], axis=0).astype(np.uint8), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+    plt.imsave(config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/images/mask_test_" + str(i) + ".png",
+               cv2.resize(np.mean(m1[b], axis=0), (1000, 1000), interpolation=cv2.INTER_NEAREST))
+
     _ = axn[k][0].imshow(np.mean(x_test, axis=0).astype(np.uint8))
     _ = axn[k][1].imshow(np.mean(im1[b], axis=0).astype(np.uint8))
     m = np.mean(lab_im1[b], axis=0).astype(np.uint8)
