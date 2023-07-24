@@ -45,10 +45,10 @@ The repository contains the following scripts:
   
 
 ## Replicate the experiments
-Modify the following code in the config.ini file to change the beaviour of VICNENT
+Modify the following code in the config.ini file to change the beaviour of VINCENT
 
 # Parameters
-```python
+```ini
 [SETTINGS]
 UseMagnetoEncoding=False : Convert tabular data to Images or load dataset
 Dataset = NSL : MALMEM|MALDROID|NSL|UNSW
