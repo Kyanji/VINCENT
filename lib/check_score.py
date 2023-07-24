@@ -63,11 +63,6 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
         # "learning_rate": 0.02,
         "UseRGBEncoding": config["SETTINGS"]["UseRGBEncoding"],
         "Dataset": config["SETTINGS"]["Dataset"],
-        "UseScale0_1": config["SETTINGS"]["UseScale0_1"],
-        "UseScale-1_1": config["SETTINGS"]["UseScale-1_1"],
-        "Resize": config["SETTINGS"]["Resize"],
-        "ResizeShape": config["SETTINGS"]["ResizeShape"],
-        "Model": config["MODEL"]["Model"],
         "Lr": config["MODEL"]["Lr"],
         "Decay": config["MODEL"]["Decay"],
         "EarlyStop": config["MODEL"]["EarlyStop"],
@@ -95,7 +90,7 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
 
     if dashboard is not None:
         dashboard.log(scores)
-    return scores
+    return scores, res
 
 
 def check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, N_CLASSES, time,

@@ -4,19 +4,19 @@ import numpy as np
 
 
 def load_dataset(dataset_param):
-    f_myfile = open(dataset_param["pathImages"] + dataset_param["trainName"], 'rb')
+    f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["trainName"], 'rb')
     x_train = np.array(pickle.load(f_myfile))
     f_myfile.close()
 
-    f_myfile = open(dataset_param["pathImages"] + dataset_param["YtrainName"], 'rb')
+    f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["YtrainName"], 'rb')
     y_train = pickle.load(f_myfile)
     f_myfile.close()
 
-    f_myfile = open(dataset_param["pathImages"] + dataset_param["testName"], 'rb')
+    f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["testName"], 'rb')
     x_test = np.array(pickle.load(f_myfile))
     f_myfile.close()
 
-    f_myfile = open(dataset_param["pathImages"] + dataset_param["YtestName"], 'rb')
+    f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["YtestName"], 'rb')
     y_test = pickle.load(f_myfile)
     f_myfile.close()
 

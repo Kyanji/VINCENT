@@ -79,7 +79,7 @@ def hyperopt_loop(param):
 
     callbacks = dashboard
     stop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001,
-                                                     patience=config.getint("MODEL", "Patience"),
+                                                     patience=config.getint("DISTILLATION", "Patience"),
                                                      restore_best_weights=True, verbose=2)
     callbacks.append(stop_callback)
 

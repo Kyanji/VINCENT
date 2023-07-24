@@ -1,48 +1,37 @@
 import configparser
-import os
-from datetime import datetime
-
-import pickle
-import cv2
 import json
-import numpy as np
-from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split
-from keras.utils import to_categorical
+import os
+from csv import DictReader
 
-from lib.check_score import check_score_and_save, check_score_and_save_bin
-from lib.fit import fit
+import numpy as np
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+
+from VINCENT_main import create_heatmap, create_ds_with_heatmap, VINCENT_fit
+from lib.check_score import check_score_and_save
+from lib.distiller_heatmap import Distiller_heatmap
 from lib.load_dataset import load_dataset
-from lib.load_model import load_model
-from lib.model_compile import model_compile
+from lib.load_student_model import load_student
 from lib.set_dashboard import set_dashboard
-from lib.to_rgb import rgb_image_generation, get_rgb_images
+from lib.to_rgb import get_rgb_images
+from vit_main import vit_fit
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from tensorflow.compat.v1 import InteractiveSession
 from MAGNETO.magneto_main import magneto_main
-from vit_keras import vit, utils
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
 session = InteractiveSession(config=config)
 
 
-def giusy_map(a):
-    b = int(a)
-    if a == 4:
-        return 0
-    else:
-        return 1
-
-
 def main():
     config = configparser.ConfigParser()
     config.read('config.ini')
+    # SET ENVIRONMENTAL PARAMETERS
     os.environ['PYTHONHASHSEED'] = config["SETTINGS"]["Seed"]
     tf.compat.v1.set_random_seed(config["SETTINGS"]["Seed"])
-
     os.environ['TF_DETERMINISTIC_OPS'] = '1'
     os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
     tf.config.threading.set_inter_op_parallelism_threads(1)
@@ -54,90 +43,75 @@ def main():
 
     dataset_param = config[config["SETTINGS"]["Dataset"]]
 
+    # CONVERT TABULAR DATA TO IMAGES OR LOAD PICKLE
     if config.getboolean("SETTINGS", "UseMagnetoEncoding"):
+        print("----USING MAGNETO ENCODING----")
         magneto_main(config, dataset_param, dataset_param.getboolean("toBinary"),
                      json.loads(dataset_param["toBinaryMap"]))
 
-    print(dataset_param["pathImages"] + dataset_param["trainName"])
+    print(dataset_param["OutputDirMagneto"] + dataset_param["trainName"])
     x_train, y_train, x_test, y_test = load_dataset(dataset_param)
-    #y_train=y_train-1
-    #y_test=y_test-1
-    #if dataset_param.getboolean("toBinary"):
-     #   print("[+]Mapping To Binary")
-      #  y_train = y_train.apply(giusy_map)
-      #  y_test = y_test.apply(giusy_map)
-    print("----SUMMARY----")
+
+    print("----SUMMARY VIT-TEACHER TRAINING----")
     print("XTRAIN SHAPE:\t", x_train.shape, "\tRANGE:\t", x_train.min(), x_train.max())
     print("XTEST SHAPE:\t", x_test.shape, "\tRANGE:\t", x_test.min(), x_test.max())
     print("CLASSES:\t", len(set(y_train)))
-    if False:
-        print("[+]0 1 norm giusy")
-        x_train = np.array(x_train) / 2
-        x_test = np.array(x_test) / 2
+
     if config.getboolean("SETTINGS", "UseRGBEncoding"):
         print("[+]RGB encoding")
         shape = x_train.shape[1:3]
         x_train = get_rgb_images(x_train, shape)
         x_test = get_rgb_images(x_test, shape)
 
-    if config.getboolean("SETTINGS", "UseScale0_1"):
-        print("[+]0 1 norm")
-        x_train = np.array(x_train) / 255
-        x_test = np.array(x_test) / 255
-    if config.getboolean("SETTINGS", "UseScale-1_1"):
-        print("[+]-1 1 norm")
-        #x_train = np.array(x_train) / 255
-        #x_test = np.array(x_test) / 255
-        #x_train = x_train * 2 - 1
-        #x_test = x_test * 2 - 1
-        x_train = vit.preprocess_inputs(x_train).reshape(-1, 8, 8, 3)
-        x_test = vit.preprocess_inputs(x_test).reshape(-1, 8, 8, 3)
-    if config.getboolean("SETTINGS", "Resize"):
-        print("[+]Resizing to ", json.loads(config["SETTINGS"]["ResizeShape"]))
-
-        new_size = json.loads(config["SETTINGS"]["ResizeShape"])
-
-        x_train_resized = []
-        x_test_resized = []
-        for i in x_train:
-            xx = cv2.resize(i, (new_size[0], new_size[1]), interpolation=cv2.INTER_NEAREST)
-            x_train_resized.append(xx)
-        for i in x_test:
-            xx = cv2.resize(i, (new_size[0], new_size[1]), interpolation=cv2.INTER_NEAREST)
-            x_test_resized.append(xx)
-        x_train_resized = np.array(x_train_resized)
-        x_test_resized = np.array(x_test_resized)
-
-    if config.getboolean("SETTINGS", "Resize"):
-        x_train, x_val, y_train, y_val = train_test_split(x_train_resized, y_train, stratify=y_train, test_size=0.2,
-                                                          random_state=config.getint("SETTINGS", "Seed"))
-    else:
-        x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, stratify=y_train, test_size=0.2,
-                                                          random_state=config.getint("SETTINGS", "Seed"))
-
-    model = load_model(config, x_train.shape[1:4], len(set(y_train)))
-    model = model_compile(model, config)
-    dashboard, wandb = set_dashboard(config)
-
-    print("----TRAINING SUMMARY----")
-    print("SHAPE:\t", x_train.shape, "\tRANGE:\t", x_train.min(), x_train.max())
-    print("CLASSES:\t", len(set(y_train)))
-    start = datetime.now()
-    model, history = fit(model, config, x_train, y_train, x_val, y_val, dashboard)
-    end = datetime.now()
-
-    if len(set(y_train)) != 2:
-        scores = check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config, wandb)
-    else:
-        if config.getboolean("SETTINGS", "Resize"):
-            scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test_resized, y_test,
-                                              config, len(set(y_train)), end - start,
-                                              wandb)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, stratify=y_train, test_size=0.2,
+                                                      random_state=config.getint("SETTINGS", "Seed"))
+    if config.getboolean("SETTINGS", "TrainVIT"):
+        # TRAIN VIT
+        if config.getboolean("SETTINGS", "Wandb"):
+            dashboard, wandb = set_dashboard(config)
         else:
-            scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test, y_test, config,
-                                              len(set(y_train)), end - start,
-                                              wandb)
+            dashboard = []
+            wandb = None
+        teacher, history = vit_fit(config, x_train, y_train, x_val, y_val, dashboard)
+        scores, res_test = check_score_and_save(history, teacher, x_train, y_train, x_val, y_val, x_test, y_test,
+                                                config, wandb)
+        print(scores)
+        cr_teacher = classification_report(y_test, res_test)
+        print(cr_teacher)
 
+    else:
+        path = dataset_param["VIT_Teacher_Path"]
+        teacher = tf.keras.models.load_model(path, compile=False)  # vit
+
+    im = create_heatmap(teacher, x_train, 1)
+    im_val = create_heatmap(teacher, x_val, 1)
+    im_test = create_heatmap(teacher, x_test, 1)
+
+    # CRAFT ARRAY WITH ORIGINAL DATA AND ORIGINAL+HEATMAP
+    x_with_h = create_ds_with_heatmap(x_train, im)
+    x_with_h_val = create_ds_with_heatmap(x_val, im_val)
+    x_with_h_test = create_ds_with_heatmap(x_test, im_test)
+
+    if config.getboolean("SETTINGS", "TrainVINCENT"):
+        distiller, score = VINCENT_fit(config, teacher, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test, y_test)
+    else:
+        if "tf" in dataset_param["VINCENTPath"]:
+            with open(dataset_param["VINCENTPath"].replace(dataset_param["VINCENTPath"].split(".")[-1],
+                                                                 "csv"), 'r') as f:
+                dict_reader = DictReader(f)
+                hyp = list(dict_reader)[0]
+        hyp["dropout1"] = float(hyp["dropout1"])
+        hyp["dropout2"] = float(hyp["dropout2"])
+        hyp["kernel"] = int(hyp["kernel"])
+        student = load_student(config, input_shape=x_train.shape[1: 4], hyperparameters=hyp,
+                               num_classes=len(set(y_train)))
+        distiller = Distiller_heatmap(student=student, teacher=teacher)
+        distiller.load_weights(dataset_param["VINCENTPath"])
+
+    y_pred = distiller.predict(x_with_h_test)
+    y_pred = np.argmax(y_pred, axis=-1)
+    cr_student = classification_report(y_test, y_pred)
+    print(cr_student)
     print("-----")
 
 

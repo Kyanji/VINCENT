@@ -2,6 +2,7 @@ import configparser
 import os
 import pickle
 from datetime import datetime
+from random import random
 
 import cv2
 import json
@@ -26,6 +27,7 @@ from lib.load_model import load_model
 from lib.load_student_model import load_student
 from lib.model_compile import model_compile
 from lib.set_dashboard import set_dashboard, set_dashboard_distiller
+from lib.standard_distiller import Standard_Distiller
 from lib.student_compile import student_compile
 from lib.to_rgb import get_rgb_images
 
@@ -43,8 +45,9 @@ tf.config.run_functions_eagerly(True)
 config_tf = tf.compat.v1.ConfigProto()
 config_tf.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
 
-# os.environ['HYPEROPT_FMIN_SEED'] = "9"
+#os.environ['HYPEROPT_FMIN_SEED'] = "9"
 os.environ['HYPEROPT_FMIN_SEED'] = "0"
+random.seed(0)
 
 session = InteractiveSession(config=config_tf)
 
@@ -81,6 +84,8 @@ def hyperopt_loop(param):
         wandb=None
     if config.getboolean("DISTILLATION", "Defensive"):
         distiller = Defensive_Distiller_heatmap(student=student, teacher=teacher)
+    elif config.getboolean("DISTILLATION", "StandardDistillation"):
+        distiller = Standard_Distiller(student=student, teacher=teacher)
     else:
         distiller = Distiller_heatmap(student=student, teacher=teacher)
 
@@ -133,7 +138,7 @@ def hyperopt_loop(param):
     print("end")
     # distiller.evaluate(x_with_h, y_test)
     if len(set(y_train)) != 2:
-        scores = check_score_and_save(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test, y_test,
+        scores, y_pred = check_score_and_save(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test, y_test,
                                       config, save=False, distillation=True, dashboard=wandb,time=datetime.now()-start)
     else:
         scores = check_score_and_save_bin(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test,
@@ -144,6 +149,8 @@ def hyperopt_loop(param):
     score_list.append(scores)
     if config.getboolean("DISTILLATION", "Defensive"):
         path=config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/defensive_distiller_" + str(date)
+    elif config.getboolean("DISTILLATION", "StandardDistillation"):
+        path=config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/standard_distiller_" + str(date)
     else:
         path=config[config["SETTINGS"]["Dataset"]]["OutputDir"] + "/distiller_" + str(date)
 
@@ -184,7 +191,7 @@ def main():
     global config
     config = configparser.ConfigParser()
 
-    config.read('config.ini')
+    config.read('config1.ini')
     os.environ['PYTHONHASHSEED'] = config["SETTINGS"]["Seed"]
     tf.compat.v1.set_random_seed(config["SETTINGS"]["Seed"])
 
@@ -272,8 +279,11 @@ def main():
     trials = Trials()
 
     optimizable_variable = {"kernel": hp.choice("kernel", np.arange(2, 3 + 1)),
-                            "filter": hp.choice("filter", [128, 256]),
+                         #   "filter": hp.choice("filter", [128, 256]),
+                            "filter": hp.choice("filter", [16, 32, 64, 128]),
+
                             "filter2": hp.choice("filter2", [16, 32, 64, 128]),
+                          #  "batch": hp.choice("batch", [64, 128, 256, 512]),
                             "batch": hp.choice("batch", [64, 128, 256, 512]),
                             'dropout1': hp.uniform("dropout1", 0, 1),
                             'dropout2': hp.uniform("dropout2", 0, 1),
@@ -282,17 +292,17 @@ def main():
                             "A": hp.uniform("A", 0, 1),
                             "epoch": 30}
     if config["SETTINGS"]["Dataset"] == "NSL":
-        optimizable_variable = {"kernel": hp.choice("kernel", np.arange(2, 3 + 1)),
-                                "filter": hp.choice("filter", [16, 32, 64, 128]),
-                                "filter2": hp.choice("filter2", [16, 32, 64, 128]),
-                                "batch": hp.choice("batch", [32, 64, 128, 256, 512]),
-                                'dropout1': hp.uniform("dropout1", 0, 0.5),
-                                'dropout2': hp.uniform("dropout2", 0, 0.5),
-                                "learning_rate": hp.uniform("learning_rate", 1e-4, 1e-1),
-                                "T": hp.choice("T", [2, 3, 4, 5, 6, 7, 8, 9, 10]),
-                                "A": hp.uniform("A", 0, 1)}
+        optimizable_variable = {"kernel": hp.choice("kernel", [2]),
+                                "filter": hp.choice("filter", [64]),
+                                "filter2": hp.choice("filter2", [64]),
+                                "batch": hp.choice("batch", [512]),
+                                'dropout1': hp.choice("dropout1", [0.1433322097359599]),
+                                'dropout2': hp.choice("dropout2", [0.16551147168904612]),
+                                "learning_rate": hp.choice("learning_rate",[0.06345965575278556]),
+                                "T": hp.choice("T", [3]),
+                                "A": hp.choice("A", [0.5653684610299501])}
 
-    fmin(hyperopt_loop, optimizable_variable, trials=trials, algo=tpe.suggest, max_evals=20)
+    fmin(hyperopt_loop, optimizable_variable, trials=trials, algo=tpe.suggest, max_evals=40)
 
 
 if __name__ == '__main__':
