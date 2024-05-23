@@ -2,7 +2,10 @@ from keras import Model
 from keras.layers import *
 
 
-def load_student(config, input_shape, num_classes, hyperparameters):
+def load_student(config, input_shape, num_classes, hyperparameters, test_time=False):
+    if test_time:
+        hyperparameters["dropout1"] = 0
+        hyperparameters["dropout2"] = 0
     if config["DISTILLATION"]["model"] == "CNN1":
         inputs = Input(input_shape)
         X = Conv2D(32, (hyperparameters["kernel"], hyperparameters["kernel"]), activation='relu', name='conv0',

@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-
+import gc
 import numpy as np
 from hyperopt import hp, fmin, tpe, Trials, STATUS_OK
 from keras.utils import to_categorical
@@ -51,7 +51,7 @@ best_model = None
 best_score = None
 
 
-def create_heatmap(teacher, data, split_rate):
+def create_heatmap(teacher, data, split_rate, all=False):
     im = []
     index = list(split(range(len(data)), split_rate))
     for k in index:
@@ -68,6 +68,8 @@ def create_ds_with_heatmap(data, im):
 
 
 def hyperopt_loop(param):
+    gc.collect()
+    print(param)
     global teacher, config, i, best_model, best_score
     global x_with_h, y_train, x_with_h_val, y_val, x_with_h_test, y_test
     i = i + 1
@@ -131,9 +133,10 @@ def hyperopt_loop(param):
         )
     print("end")
     # distiller.evaluate(x_with_h, y_test)
-    scores, res_test  = check_score_and_save(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test, y_test,
-                                  config, save=False, distillation=True, dashboard=wandb,
-                                  time=datetime.now() - start)
+    scores, res_test = check_score_and_save(history, distiller, x_with_h, y_train, x_with_h_val, y_val, x_with_h_test,
+                                            y_test,
+                                            config, save=False, distillation=True, dashboard=wandb,
+                                            time=datetime.now() - start)
 
     scores.update(param)
     score_list.append(scores)
@@ -182,7 +185,7 @@ def VINCENT_fit(config_g, teacher_g, x_with_h_g, y_train_g, x_with_h_val_g, y_va
     trials = Trials()
     optimizable_variable = {
         "kernel": hp.choice("kernel", np.arange(2, 3 + 1)),
-        "batch": hp.choice("batch", [64, 128, 256, 512]),
+        "batch": hp.choice("batch", [64, 128, 256]), #, 512
         'dropout1': hp.uniform("dropout1", 0, 1),
         'dropout2': hp.uniform("dropout2", 0, 1),
         "learning_rate": hp.uniform("learning_rate", 1e-4, 1e-1),

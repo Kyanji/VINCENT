@@ -6,6 +6,9 @@ from datetime import datetime
 from keras.utils import to_categorical
 
 
+# from torch.testing._internal.distributed.rpc.examples.parameter_server_test import batch_size
+
+
 def split(a, n):
     k, m = divmod(len(a), n)
     return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
@@ -19,7 +22,12 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
     else:
         scores = {"epoch_done": len(history.history["loss"])}
 
-    res = np.argmax(model.predict(x_test), axis=-1)
+    # res = np.argmax(model.predict(x_test), axis=-1)
+    index = list(split(range(len(x_test)), 10))
+    res_partial = [np.argmax(model.predict(np.array(x_test[k])), axis=-1) for k in index]
+    res = []
+    for r in res_partial:
+        res.extend(r)
     res_path = config[config["SETTINGS"]["Dataset"]]["OutputDir"]
     now = datetime.now()
     date = now.strftime("%Y-%m-%d-%H-%M-%S")
@@ -40,13 +48,21 @@ def check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test,
     else:
         scores_loss = [history.history['val_loss'][epoch] for epoch in range(len(history.history['loss']))]
         scores["val_loss"] = min(scores_loss)
-    index = list(split(range(len(x_train)), 4))
+    index = list(split(range(len(x_train)), 8))
     res_training = []
     for k in index:
-        total_x = np.argmax(model.predict(np.array(x_train[k])), axis=-1)
-        res_training.extend(total_x)
-    total_x = np.argmax(model.predict(np.array(x_val)), axis=-1)
-    res_training.extend(total_x)
+        try:
+            total_x = np.argmax(model.predict(np.array(x_train[k])), axis=-1)
+            res_training.extend(total_x)
+        except Exception as e:
+            print("Out of Memory"+str(e))
+            pass
+    index = list(split(range(len(x_val)), 5))
+    total_x = [np.argmax(model.predict(np.array(x_val[k])), axis=-1) for k in index]
+    total_x_full = []
+    for r in total_x:
+        total_x_full.extend(r)
+    res_training.extend(total_x_full)
 
     scores["OA_train"] = metrics.accuracy_score(np.concatenate((y_train, y_val), axis=0), res_training) * 100
     scores["BalancedAccuracy_train"] = metrics.balanced_accuracy_score(np.concatenate((y_train, y_val), axis=0),

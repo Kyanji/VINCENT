@@ -9,7 +9,7 @@ def load_dataset(dataset_param):
     f_myfile.close()
 
     f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["YtrainName"], 'rb')
-    y_train = pickle.load(f_myfile)
+    y_train = np.array(pickle.load(f_myfile))
     f_myfile.close()
 
     f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["testName"], 'rb')
@@ -17,7 +17,7 @@ def load_dataset(dataset_param):
     f_myfile.close()
 
     f_myfile = open(dataset_param["OutputDirMagneto"] + dataset_param["YtestName"], 'rb')
-    y_test = pickle.load(f_myfile)
+    y_test =  np.array(pickle.load(f_myfile))
     f_myfile.close()
 
     y_train = y_train.astype(float)

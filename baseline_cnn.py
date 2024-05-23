@@ -26,6 +26,7 @@ from lib.load_student_model import load_student
 from lib.model_compile import model_compile
 from lib.set_dashboard import set_dashboard, set_dashboard_distiller
 from lib.student_compile import student_compile
+from lib.teacher_CNN import teacher_CNN
 from lib.to_rgb import get_rgb_images
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -69,7 +70,7 @@ def hyperopt_loop(param):
     i = i + 1
     shape = x_train.shape[1:4]
     start = datetime.now()
-    model = load_student(config, shape, len(set(y_train)), param)
+    model = teacher_CNN(shape, len(set(y_train)), param)
     student_compile(model, param)
     if config.getboolean("SETTINGS", "Wandb"):
         dashboard, wandb = set_dashboard_distiller(config, param, run_id=date, id=i)
@@ -98,9 +99,9 @@ def hyperopt_loop(param):
     print("end")
     # distiller.evaluate(x_with_h, y_test)
     if len(set(y_train)) != 2:
-        scores = check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test, y_test,
-                                      config, save=False, distillation=False, dashboard=wandb,
-                                      time=datetime.now() - start)
+        scores, pred = check_score_and_save(history, model, x_train, y_train, x_val, y_val, x_test, y_test,
+                                            config, save=False, distillation=False, dashboard=wandb,
+                                            time=datetime.now() - start)
     else:
         scores = check_score_and_save_bin(history, model, x_train, y_train, x_val, y_val, x_test,
                                           y_test, config,
@@ -169,6 +170,8 @@ def main():
     x_train, y_train, x_test, y_test = load_dataset(dataset_param)
     x_train = get_rgb_images(x_train, x_train.shape[1:3])
     x_test = get_rgb_images(x_test, x_test.shape[1:3])
+    # x_train=x_train/255
+    #  x_test=x_test/255
 
     x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, stratify=y_train, test_size=0.2,
                                                       random_state=config.getint("SETTINGS", "Seed"))
@@ -191,7 +194,8 @@ def main():
                                 "learning_rate": hp.uniform("learning_rate", 1e-4, 1e-1),
                                 }
 
-    fmin(hyperopt_loop, optimizable_variable, trials=trials, algo=tpe.suggest, max_evals=20)
+    fmin(hyperopt_loop, optimizable_variable, trials=trials, algo=tpe.suggest, max_evals=30)
+    print("---")
 
 
 if __name__ == '__main__':

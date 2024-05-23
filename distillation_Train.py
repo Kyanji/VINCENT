@@ -1,32 +1,21 @@
 import configparser
 import os
-import pickle
 from datetime import datetime
 from random import random
 
-import cv2
-import json
 import numpy as np
-from skimage import color, io
-
 from hyperopt import hp, fmin, tpe, Trials, STATUS_OK
-from keras import Input
-from keras.layers import Conv2D, Dropout, Flatten, Dense
 from keras.utils import to_categorical
-from matplotlib import pyplot as plt
+from skimage import color
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler, minmax_scale
 from sklearn.utils import class_weight
-from vit_keras import vit, utils, visualize
 
 from lib.check_score import check_score_and_save, check_score_and_save_bin
-from lib.distiller_heatmap import Distiller_heatmap
 from lib.defensive_distiller_heatmap import Defensive_Distiller_heatmap
+from lib.distiller_heatmap import Distiller_heatmap
 from lib.load_dataset import load_dataset
-from lib.load_model import load_model
 from lib.load_student_model import load_student
-from lib.model_compile import model_compile
-from lib.set_dashboard import set_dashboard, set_dashboard_distiller
+from lib.set_dashboard import set_dashboard_distiller
 from lib.standard_distiller import Standard_Distiller
 from lib.student_compile import student_compile
 from lib.to_rgb import get_rgb_images
@@ -34,9 +23,7 @@ from lib.to_rgb import get_rgb_images
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from tensorflow.compat.v1 import InteractiveSession
-from lib.custom_attention import attention_map_no_norm, attention_map_no_norm_fast
-from keras_cv_attention_models import visualizing, test_images, botnet, halonet, beit, levit, coatnet, coat
-from tensorflow.keras import layers
+from lib.custom_attention import attention_map_no_norm_fast
 import pandas as pd
 from keras import backend as K
 
@@ -45,7 +32,6 @@ tf.config.run_functions_eagerly(True)
 config_tf = tf.compat.v1.ConfigProto()
 config_tf.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
 
-#os.environ['HYPEROPT_FMIN_SEED'] = "9"
 os.environ['HYPEROPT_FMIN_SEED'] = "0"
 random.seed(0)
 

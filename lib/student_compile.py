@@ -4,7 +4,7 @@ import keras
 
 def student_compile(model, hyperparam):
     optimizer = tfa.optimizers.AdamW(
-        learning_rate=hyperparam["learning_rate"],weight_decay=0.01
+        learning_rate=hyperparam["learning_rate"], weight_decay=0.01
     )
     model.compile(
         optimizer=optimizer,

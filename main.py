@@ -9,17 +9,23 @@ from sklearn.model_selection import train_test_split
 
 from VINCENT_main import create_heatmap, create_ds_with_heatmap, VINCENT_fit
 from lib.check_score import check_score_and_save
+from lib.cnn_attention_main import cnn_attention_main
+from lib.create_heatmap_CNN import create_heatmap_CNN
 from lib.distiller_heatmap import Distiller_heatmap
 from lib.load_dataset import load_dataset
 from lib.load_student_model import load_student
 from lib.set_dashboard import set_dashboard
+from lib.teacher_CNN import teacher_CNN
 from lib.to_rgb import get_rgb_images
+from utils.make_malmem_balanced import make_malmem_balanced
 from vit_main import vit_fit
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from tensorflow.compat.v1 import InteractiveSession
 from MAGNETO.magneto_main import magneto_main
+import matplotlib.pyplot as plt
+from sklearn.utils.random import sample_without_replacement
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -51,6 +57,8 @@ def main():
 
     print(dataset_param["OutputDirMagneto"] + dataset_param["trainName"])
     x_train, y_train, x_test, y_test = load_dataset(dataset_param)
+    y_train = np.array(y_train)
+    y_test = np.array(y_test)
 
     print("----SUMMARY VIT-TEACHER TRAINING----")
     print("XTRAIN SHAPE:\t", x_train.shape, "\tRANGE:\t", x_train.min(), x_train.max())
@@ -65,27 +73,59 @@ def main():
 
     x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, stratify=y_train, test_size=0.2,
                                                       random_state=config.getint("SETTINGS", "Seed"))
-    if config.getboolean("SETTINGS", "TrainVIT"):
-        # TRAIN VIT
-        if config.getboolean("SETTINGS", "Wandb"):
-            dashboard, wandb = set_dashboard(config)
+    if not config.getboolean("SETTINGS", "UseCNNAttention"):
+        if config.getboolean("SETTINGS", "TrainVIT"):
+            # TRAIN VIT
+            if config.getboolean("SETTINGS", "Wandb"):
+                dashboard, wandb = set_dashboard(config)
+            else:
+                dashboard = []
+                wandb = None
+            teacher, history = vit_fit(config, x_train, y_train, x_val, y_val, dashboard)
+            scores, res_test = check_score_and_save(history, teacher, x_train, y_train, x_val, y_val, x_test, y_test,
+                                                    config, wandb)
+            print(scores)
+            cr_teacher = classification_report(y_test, res_test)
+            print(cr_teacher)
+
         else:
-            dashboard = []
-            wandb = None
-        teacher, history = vit_fit(config, x_train, y_train, x_val, y_val, dashboard)
-        scores, res_test = check_score_and_save(history, teacher, x_train, y_train, x_val, y_val, x_test, y_test,
-                                                config, wandb)
-        print(scores)
-        cr_teacher = classification_report(y_test, res_test)
-        print(cr_teacher)
-
+            path = dataset_param["VIT_Teacher_Path"]
+            teacher = tf.keras.models.load_model(path, compile=False)  # vit
     else:
-        path = dataset_param["VIT_Teacher_Path"]
-        teacher = tf.keras.models.load_model(path, compile=False)  # vit
+        if config.getboolean("SETTINGS", "TrainVIT"):
+            # TRAIN CNN ATTENTION
+            if config.getboolean("SETTINGS", "Wandb"):
+                dashboard, wandb = set_dashboard(config)
+            else:
+                dashboard = []
+                wandb = None
+            teacher, history = cnn_attention_main(config, x_train, y_train, x_val, y_val, x_test, y_test)
+            scores, res_test = check_score_and_save(history, teacher, x_train, y_train, x_val, y_val, x_test, y_test,
+                                                    config, wandb)
+            print(scores)
+            cr_teacher = classification_report(y_test, res_test)
+            print(cr_teacher)
 
-    im = create_heatmap(teacher, x_train, 1)
-    im_val = create_heatmap(teacher, x_val, 1)
-    im_test = create_heatmap(teacher, x_test, 1)
+        else:
+            #   x_train = x_train / 255
+            #   x_val = x_val / 255
+            #   x_test = x_test / 255
+            hyp = {}
+            hyp["dropout1"] = 0
+            hyp["dropout2"] = 0
+            hyp["kernel"] = 2
+            teacher = teacher_CNN(input_shape=x_train.shape[1: 4], hyperparameters=hyp,
+                                  num_classes=len(set(y_train)))
+            teacher.load_weights(dataset_param["VIT_Teacher_Path_CNN"])
+
+    if not config.getboolean("SETTINGS", "UseCNNAttention"):
+        im = create_heatmap(teacher, x_train, 10)
+        im_val = create_heatmap(teacher, x_val, 5)
+        im_test = create_heatmap(teacher, x_test, 10)
+    else:
+        im, nat1 = create_heatmap_CNN(teacher, x_train, 1)
+        im_val, nat2 = create_heatmap_CNN(teacher, x_val, 1)
+        im_test, nat3 = create_heatmap_CNN(teacher, x_test, 1)
 
     # CRAFT ARRAY WITH ORIGINAL DATA AND ORIGINAL+HEATMAP
     x_with_h = create_ds_with_heatmap(x_train, im)
@@ -97,14 +137,12 @@ def main():
     else:
         if "tf" in dataset_param["VINCENTPath"]:
             with open(dataset_param["VINCENTPath"].replace(dataset_param["VINCENTPath"].split(".")[-1],
-                                                                 "csv"), 'r') as f:
+                                                           "csv"), 'r') as f:
                 dict_reader = DictReader(f)
                 hyp = list(dict_reader)[0]
-        hyp["dropout1"] = float(hyp["dropout1"])
-        hyp["dropout2"] = float(hyp["dropout2"])
         hyp["kernel"] = int(hyp["kernel"])
         student = load_student(config, input_shape=x_train.shape[1: 4], hyperparameters=hyp,
-                               num_classes=len(set(y_train)))
+                               num_classes=len(set(y_train)), test_time=True)
         distiller = Distiller_heatmap(student=student, teacher=teacher)
         distiller.load_weights(dataset_param["VINCENTPath"])
 
