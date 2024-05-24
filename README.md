@@ -37,7 +37,7 @@ The [DATASETS](https://drive.google.com/file/d/1UeyREoDE28VELDnBgu5bcJ1TauH2Ym-E
 * NSL-KDD
 * UNSW-NB15
 
-* The datasets of images created by using [MAGNETO](https://github.com/Kyanji/MAGNETO/) are uploaded in the folder [IMAGES DATASETS](https://drive.google.com/file/d/1MBMnjk9ipmvQaRe9IgsPTdRZrrGsqO9k/view?usp=sharing) used are:
+* The datasets of images created by using [MAGNETO](https://github.com/Kyanji/MAGNETO/) are uploaded in the folder [IMAGES DATASETS](https://drive.google.com/file/d/1MBMnjk9ipmvQaRe9IgsPTdRZrrGsqO9k/view?usp=sharing)
   
 ## How to use
 
