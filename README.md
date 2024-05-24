@@ -36,6 +36,8 @@ The [DATASETS](https://drive.google.com/file/d/1UeyREoDE28VELDnBgu5bcJ1TauH2Ym-E
 * CICMalMem22
 * NSL-KDD
 * UNSW-NB15
+
+* The datasets of images created by using [MAGNETO] (https://github.com/Kyanji/MAGNETO/) are uploaded in the folder [IMAGES DATASETS](https://drive.google.com/file/d/1MBMnjk9ipmvQaRe9IgsPTdRZrrGsqO9k/view?usp=sharing) used are:
   
 ## How to use
 
@@ -45,7 +47,9 @@ The repository contains the following scripts:
   
 
 ## Replicate the experiments
-Modify the following code in the config.ini file to change the beaviour of VINCENT
+Modify the following code in the config.ini file to change the behaviour of VINCENT.
+
+The models reported in the paper are uploaded in [IMODELS]([https://drive.google.com/file/d/1MBMnjk9ipmvQaRe9IgsPTdRZrrGsqO9k/view?usp=sharing](https://drive.google.com/file/d/1_lD4-SC35hzDPinY_D6DkdOI3k_Z_YTL/view?usp=sharing))
 
 # Parameters
 ```ini
