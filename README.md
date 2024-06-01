@@ -3,7 +3,7 @@
 The repository contains code refered to the work:
 
 _Luca De Rose, Giuseppina Andresini, Annalisa Appice, Donato Malerba_
-
+[VINCENT: Cyber-threat Detection through Vision Transformers and Knowledge Distillation](https://www.sciencedirect.com/science/article/pii/S0167404824002293)
  
 Please cite our work if you find it useful for your research and work.
 
