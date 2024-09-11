@@ -8,6 +8,20 @@ _Luca De Rose, Giuseppina Andresini, Annalisa Appice, Donato Malerba_
  
 Please cite our work if you find it useful for your research and work.
 
+```
+@article{DEROSE2024103926,
+title = {VINCENT: Cyber-threat detection through vision transformers and knowledge distillation},
+journal = {Computers & Security},
+volume = {144},
+pages = {103926},
+year = {2024},
+issn = {0167-4048},
+doi = {https://doi.org/10.1016/j.cose.2024.103926},
+url = {https://www.sciencedirect.com/science/article/pii/S0167404824002293},
+author = {Luca {De Rose} and Giuseppina Andresini and Annalisa Appice and Donato Malerba},
+
+```
+
 
 ![VINCENT](https://github.com/Kyanji/VINCENT/blob/master/VINCENT.png)
 
